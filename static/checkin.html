@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <!-- address bar title -->
+    <title>MakerSpaceHub — Staff Check-In</title>
+
+   <link rel="stylesheet" href="css/stylesheet.css">
+</head>
+
+<body>
+
+    <header>
+        <div>
+            <div class="logo-text">&#9881; MakerSpaceHub</div>
+            <div class="logo-sub">University Makerspace Management System</div>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="equipment.html">Equipment</a></li>
+            <li><a href="dashboard.html">My Dashboard</a></li>
+            <li><a href="checkin.html" class="active">Staff Check-In</a></li>
+            <li><a href="admin.html">Admin</a></li>
+        </ul>
+    </nav>
+
+    <main>
+
+        <h1 class="page-title">Staff Check-In Panel</h1>
+        <p class="page-subtitle">
+            Check members in and out of the makerspace. Staff access only.
+            &mdash; Logged in as: <strong>Jamie Torres</strong> (Staff)
+        </p>
+
+        <div class="alert alert-warning">
+            <strong>Prototype Note:</strong> Role-based access is simulated. In the final system, this page would require staff login credentials.
+        </div>
+
+        <!-- Check-In Form -->
+        <div class="card section-gap">
+            <h2>Check In a Member</h2>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="ci-memberid">Member ID</label>
+                    <input type="text" id="ci-memberid" placeholder="e.g. M-0042">
+                </div>
+                <div class="form-group">
+                    <label for="ci-name">Member Name (optional lookup)</label>
+                    <input type="text" id="ci-name" placeholder="Start typing to search...">
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="form-group">
+                    <label for="ci-member">Member</label>
+                    <select id="ci-member"><option value="">— Select Member —</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="ci-purpose">Purpose</label>
+                    <select id="ci-purpose">
+                        <option>— Select —</option>
+                        <option>Equipment Reservation</option>
+                        <option>Open Work Session</option>
+                        <option>Class / Instruction</option>
+                        <option>Maintenance Assistance</option>
+                        <option>Other</option>
+                    </select>
+            </div>
+            <button class="btn btn-primary" onclick="checkIn()">&#9989; Check In Member</button>
+
+            <div id="ci-confirm" class="alert alert-success mt-10" style="display:none;">
+                &#10003; Member checked in successfully. Time recorded.
+            </div>
+        </div>
+
+        <!-- Currently Checked-In Members -->
+        <div class="card section-gap">
+            <h2>Currently in the Makerspace</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Member ID</th>
+                        <th>Member Name</th>
+                        <th>Check-In Time</th>
+                        <th>Purpose</th>
+                        <th>Equipment Reserved</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="checkin-table">
+                    <tr><td colspan="6" style="text-align:center; padding:20px;">Loading…</td></tr>
+                </tbody>
+            </table>
+
+            <p id="ci-count" style="font-family: Arial, sans-serif; font-size: 0.82rem; color: #888; margin-top: 10px;">
+                Loading…
+            </p>
+        </div>
+
+        <!-- Today's Check-In Log -->
+        <div class="card">
+            <h2>Today's Check-In Log</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Member ID</th>
+                        <th>Member Name</th>
+                        <th>Check-In</th>
+                        <th>Check-Out</th>
+                        <th>Duration</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody id="log-tbody">
+                    <tr><td colspan="6" style="text-align:center; padding:20px;">Loading…</td></tr>
+                </tbody>
+            </table>
+            <div class="mt-10 text-right">
+                <button class="btn btn-primary btn-small">Export Log (CSV)</button>
+                <button class="btn btn-primary btn-small" onclick="exportLog()">Export Log (CSV)</button>
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>
+            <a href="index.html">Home</a> |
+            <a href="equipment.html">Equipment</a> |
+            <a href="dashboard.html">My Dashboard</a> |
+            <a href="checkin.html">Staff Check-In</a> |
+            <a href="admin.html">Admin</a>
+        </p>
+        <p style="margin-top: 6px;">MakerSpaceHub &mdash; IT299 Capstone Prototype &mdash; Purdue University Global</p>
+    </footer>
+
+    <script>
+    let todaysLog = [];  // cached for CSV export
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadMembers();
+        await refreshCheckins();
+    });
+
+    async function loadMembers() {
+        try {
+            const response = await fetch('/members');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const members = await response.json();
+            const selector = document.getElementById('ci-member');
+            members.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = `M-${String(m.id).padStart(4, '0')} — ${m.first_name} ${m.last_name}`;
+                selector.appendChild(opt);
+            });
+        } catch (err) {
+            console.error('Failed to load members:', err);
+        }
+    }
+
+    async function refreshCheckins() {
+        try {
+            const [activeRes, todayRes] = await Promise.all([
+                fetch('/checkins?active=true'),
+                fetch('/checkins')
+            ]);
+            if (!activeRes.ok || !todayRes.ok) throw new Error('Endpoint failure');
+            const active = await activeRes.json();
+            todaysLog = await todayRes.json();
+            renderActive(active);
+            renderLog(todaysLog);
+        } catch (err) {
+            console.error('Failed to refresh check-ins:', err);
+            document.getElementById('checkin-table').innerHTML =
+                '<tr><td colspan="6" style="color:#c00;">Could not load check-ins.</td></tr>';
+        }
+    }
+
+    function renderActive(active) {
+        const tbody = document.getElementById('checkin-table');
+        const count = document.getElementById('ci-count');
+        count.textContent = `${active.length} member${active.length === 1 ? '' : 's'} currently present.`;
+
+        if (active.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#777;">No members currently checked in.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        active.forEach(c => {
+            const memberName = c.member ? `${c.member.first_name} ${c.member.last_name}` : '—';
+            const equipmentName = c.reservation?.equipment?.name || '—';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>M-${String(c.member_id).padStart(4, '0')}</td>
+                <td>${escapeHtml(memberName)}</td>
+                <td>${formatTime(c.check_in_time)}</td>
+                <td>${escapeHtml(c.purpose || '—')}</td>
+                <td>${escapeHtml(equipmentName)}</td>
+                <td><button class="btn btn-danger btn-small" onclick="checkOut(${c.id}, '${escapeAttr(memberName)}')">Check Out</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderLog(log) {
+        const tbody = document.getElementById('log-tbody');
+        if (log.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#777;">No check-ins today.</td></tr>';
+            return;
+        }
+        // Sort earliest check-in first
+        log.sort((a, b) => new Date(a.check_in_time) - new Date(b.check_in_time));
+        tbody.innerHTML = '';
+        log.forEach(c => {
+            const memberName = c.member ? `${c.member.first_name} ${c.member.last_name}` : '—';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>M-${String(c.member_id).padStart(4, '0')}</td>
+                <td>${escapeHtml(memberName)}</td>
+                <td>${formatTime(c.check_in_time)}</td>
+                <td>${c.check_out_time ? formatTime(c.check_out_time) : '—'}</td>
+                <td>${formatDuration(c.check_in_time, c.check_out_time)}</td>
+                <td>${escapeHtml(c.purpose || '—')}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function checkIn() {
+        const memberId = parseInt(document.getElementById('ci-member').value, 10);
+        const purpose = document.getElementById('ci-purpose').value;
+        if (!memberId || purpose === '— Select —') {
+            alert('Please select a member and purpose.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/checkins', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    member_id: memberId,
+                    purpose: purpose,
+                    reservation_id: null
+                })
+            });
+            if (response.ok) {
+                document.getElementById('ci-confirm').style.display = 'block';
+                document.getElementById('ci-member').value = '';
+                document.getElementById('ci-purpose').value = '— Select —';
+                await refreshCheckins();
+                setTimeout(() => {
+                    document.getElementById('ci-confirm').style.display = 'none';
+                }, 3000);
+            } else {
+                const err = await response.json();
+                alert(`Check-in failed: ${err.detail || `HTTP ${response.status}`}`);
+            }
+        } catch (err) {
+            console.error('Check-in failed:', err);
+            alert('Could not reach server.');
+        }
+    }
+
+    async function checkOut(id, name) {
+        if (!confirm(`Check out ${name}?`)) return;
+        try {
+            const response = await fetch(`/checkins/${id}/checkout`, { method: 'POST' });
+            if (response.ok) {
+                await refreshCheckins();
+            } else {
+                alert(`Check-out failed: HTTP ${response.status}`);
+            }
+        } catch (err) {
+            console.error('Check-out failed:', err);
+            alert('Could not reach server.');
+        }
+    }
+
+    function exportLog() {
+        if (!todaysLog || todaysLog.length === 0) {
+            alert('No check-ins to export.');
+            return;
+        }
+        const headers = ['Member ID', 'Member Name', 'Check-In', 'Check-Out', 'Duration', 'Purpose'];
+        const rows = todaysLog.map(c => {
+            const memberName = c.member ? `${c.member.first_name} ${c.member.last_name}` : '';
+            return [
+                `M-${String(c.member_id).padStart(4, '0')}`,
+                memberName,
+                formatTime(c.check_in_time),
+                c.check_out_time ? formatTime(c.check_out_time) : '',
+                formatDuration(c.check_in_time, c.check_out_time),
+                c.purpose || ''
+            ];
+        });
+        const csv = [headers, ...rows]
+            .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `checkin-log-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // ---- Helpers ----
+
+    function formatTime(iso) {
+        const d = new Date(iso);
+        let h = d.getHours();
+        const m = d.getMinutes();
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${h}:${String(m).padStart(2, '0')} ${ampm}`;
+    }
+
+    function formatDuration(checkInIso, checkOutIso) {
+        if (!checkOutIso) return 'Active';
+        const start = new Date(checkInIso);
+        const end = new Date(checkOutIso);
+        const totalMinutes = Math.floor((end - start) / 60000);
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        return `${h}h ${m}m`;
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str ?? "";
+        return div.innerHTML;
+    }
+
+    function escapeAttr(str) {
+        return (str ?? "").replace(/'/g, "&#39;");
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <!-- address bar title -->
+    <title>MakerSpaceHub — Admin Dashboard</title>
+
+    <link rel="stylesheet" href="css/stylesheet.css">
+</head>
+
+<body>
+
+    <header>
+        <div>
+            <div class="logo-text">&#9881; MakerSpaceHub</div>
+            <div class="logo-sub">University Makerspace Management System</div>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="equipment.html">Equipment</a></li>
+            <li><a href="dashboard.html">My Dashboard</a></li>
+            <li><a href="checkin.html">Staff Check-In</a></li>
+            <li><a href="admin.html" class="active">Admin</a></li>
+        </ul>
+    </nav>
+
+    <main>
+
+        <h1 class="page-title">Admin Dashboard</h1>
+        <p class="page-subtitle">
+            System overview and management. Logged in as: <strong>Director Chen</strong> (Admin)
+        </p>
+
+        <div class="alert alert-warning">
+            <strong>Prototype Note:</strong> Admin access is simulated. In the final system, this page requires admin-level authentication.
+        </div>
+
+        <!-- System Stats -->
+        <div class="grid-3 section-gap">
+            <div class="stat-box">
+                <div class="stat-number" id="stat-members">—</div>  
+                <div class="stat-label">Registered Members</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-equipment">—</div> 
+                <div class="stat-label">Equipment Items</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-active">—</div> 
+                <div class="stat-label">Members Currently In Space</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-reservations">—</div>
+                <div class="stat-label">Reservations Today</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-tickets">0</div> 
+                <div class="stat-label">Open Maintenance Tickets</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-out">—</div> 
+                <div class="stat-label">Equipment Out of Service</div>
+            </div>
+        </div>
+
+        <!-- Equipment Inventory Management -->
+        <div class="card section-gap">
+            <h2>Equipment Inventory</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Equipment Name</th>
+                        <th>Category</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Last Serviced</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="equipment-tbody">
+                    <tr><td colspan="7" style="text-align:center; padding:20px;">Loading…</td></tr>
+                </tbody>
+            </table>
+            <div class="mt-10">
+                <button class="btn btn-primary" onclick="showAddEquipment()">+ Add Equipment</button>
+            </div>
+
+            <!-- Add Equipment Form -->
+            <div id="add-equipment-form" style="display:none; margin-top: 20px;">
+                <hr style="margin-bottom: 16px;">
+                <h2>Add New Equipment</h2>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="eq-name">Equipment Name</label>
+                        <input type="text" id="eq-name" placeholder="e.g. Laser Cutter B">
+                    </div>
+                    <div class="form-group">
+                        <div class="form-group">
+                            <label for="eq-category">Category</label>
+                            <select id="eq-category">
+                                <option>Fabrication</option>
+                                <option>Electronics</option>
+                                <option>Woodworking</option>
+                                <option>Textiles</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="eq-status">Initial Status</label>
+                        <select id="eq-status">
+                            <option value="available">Available</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="eq-location">Location</label>
+                        <input type="text" id="eq-location" placeholder="e.g. Bay 3">
+                    </div>
+                    <div class="form-group">
+                        <label for="eq-status">Initial Status</label>
+                        <select id="eq-status">
+                            <option>Available</option>
+                            <option>Maintenance</option>
+                            <option>Out of Service</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="addEquipment()">Save Equipment</button>
+                &nbsp;
+                <button class="btn btn-secondary" onclick="hideAddEquipment()">Cancel</button>
+
+                <div id="eq-confirm" class="alert alert-success mt-10" style="display:none;">
+                    &#10003; Equipment record added successfully.
+                </div>
+            </div>
+        </div>
+
+        <!-- Open Maintenance Tickets -->
+        <div class="card section-gap">
+            <h2>Open Maintenance Tickets</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ticket ID</th>
+                        <th>Equipment</th>
+                        <th>Reported By</th>
+                        <th>Date</th>
+                        <th>Severity</th>
+                        <th>Description</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="7" style="text-align:center; padding:20px; color:#777; font-style:italic;">
+                        No open maintenance tickets.
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Member Management -->
+        <div class="card section-gap">
+            <h2>Member List</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Member ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Membership Type</th>
+                        <th>Join Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="member-tbody">
+                    <tr><td colspan="7" style="text-align:center; padding:20px;">Loading…</td></tr>
+                </tbody>
+            </table>
+            <div class="mt-10 text-right">
+                <button class="btn btn-primary btn-small">Export Member List (CSV)</button>
+            </div>
+        </div>
+
+        <!-- Usage Summary Report -->
+        <div class="card">
+            <h2>Usage Summary — April 2026</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Equipment</th>
+                        <th>Total Reservations</th>
+                        <th>Total Hours Used</th>
+                        <th>Most Active User</th>
+                    </tr>
+                </thead>
+                <tbody id="usage-tbody">
+                    <tr><td colspan="4" style="text-align:center; padding:20px;">Loading…</td></tr>
+                </tbody>
+            </table>
+            <div class="mt-10 text-right">
+                <button class="btn btn-primary btn-small" onclick="exportMembers()">Export Member List (CSV)</button>
+                <button class="btn btn-primary btn-small" onclick="exportUsage()">Export Report (CSV)</button>
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>
+            <a href="index.html">Home</a> |
+            <a href="equipment.html">Equipment</a> |
+            <a href="dashboard.html">My Dashboard</a> |
+            <a href="checkin.html">Staff Check-In</a> |
+            <a href="admin.html">Admin</a>
+        </p>
+        <p style="margin-top: 6px;">MakerSpaceHub &mdash; IT299 Capstone Prototype &mdash; Purdue University Global</p>
+    </footer>
+
+    <script>
+    let cachedMembers = [];
+    let cachedUsage = [];
+
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+
+    async function loadDashboard() {
+        try {
+            const [membersRes, equipmentRes, reservationsRes, activeCheckinsRes] =
+                await Promise.all([
+                    fetch('/members'),
+                    fetch('/equipment'),
+                    fetch('/reservations'),
+                    fetch('/checkins?active=true')
+                ]);
+            if (!membersRes.ok || !equipmentRes.ok || !reservationsRes.ok || !activeCheckinsRes.ok) {
+                throw new Error('One or more endpoints failed');
+            }
+            const [members, equipment, reservations, activeCheckins] = await Promise.all([
+                membersRes.json(), equipmentRes.json(),
+                reservationsRes.json(), activeCheckinsRes.json()
+            ]);
+
+            cachedMembers = members;
+
+            renderStats(members, equipment, reservations, activeCheckins);
+            renderEquipmentTable(equipment);
+            renderMemberTable(members);
+
+            const usage = computeUsageSummary(reservations, equipment, members);
+            cachedUsage = usage;
+            renderUsageSummary(usage);
+
+        } catch (err) {
+            console.error('Failed to load admin dashboard:', err);
+            document.getElementById('equipment-tbody').innerHTML =
+                '<tr><td colspan="7" style="color:#c00;">Could not load admin dashboard. Check console.</td></tr>';
+        }
+    }
+
+    // ---- Stats ----
+
+    function renderStats(members, equipment, reservations, activeCheckins) {
+        document.getElementById('stat-members').textContent = members.length;
+        document.getElementById('stat-equipment').textContent = equipment.length;
+        document.getElementById('stat-active').textContent = activeCheckins.length;
+
+        // Reservations starting today (any status except cancelled)
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const todayCount = reservations.filter(r =>
+            r.status !== 'cancelled' && r.start_time.startsWith(todayStr)
+        ).length;
+        document.getElementById('stat-reservations').textContent = todayCount;
+
+        // Equipment in maintenance
+        document.getElementById('stat-out').textContent =
+            equipment.filter(e => e.status === 'maintenance').length;
+    }
+
+    // ---- Equipment table ----
+
+    function renderEquipmentTable(equipment) {
+        const tbody = document.getElementById('equipment-tbody');
+        if (equipment.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#777;">No equipment in inventory.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        equipment.forEach(e => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>EQ-${String(e.id).padStart(3, '0')}</td>
+                <td>${escapeHtml(e.name)}</td>
+                <td>${escapeHtml(e.category)}</td>
+                <td>${escapeHtml(e.location || '—')}</td>
+                <td>${statusBadge(e.status)}</td>
+                <td>—</td>
+                <td>
+                    <button class="btn btn-secondary btn-small" disabled title="Coming soon">Edit</button>
+                    <button class="btn btn-danger btn-small" disabled title="Coming soon">Flag</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function statusBadge(status) {
+        const map = {
+            available:   { cls: 'badge-available',   label: 'Available' },
+            reserved:    { cls: 'badge-reserved',    label: 'Reserved' },
+            maintenance: { cls: 'badge-maintenance', label: 'Maintenance' }
+        };
+        const m = map[status] || { cls: 'badge-inactive', label: status };
+        return `<span class="badge ${m.cls}">${m.label}</span>`;
+    }
+
+    // ---- Add Equipment form ----
+
+    function showAddEquipment() {
+        document.getElementById('add-equipment-form').style.display = 'block';
+        document.getElementById('eq-confirm').style.display = 'none';
+    }
+
+    function hideAddEquipment() {
+        document.getElementById('add-equipment-form').style.display = 'none';
+    }
+
+    async function addEquipment() {
+        const name = document.getElementById('eq-name').value.trim();
+        const category = document.getElementById('eq-category').value;
+        const location = document.getElementById('eq-location').value.trim();
+        const status = document.getElementById('eq-status').value;
+
+        if (!name || !location) {
+            alert('Please enter equipment name and location.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/equipment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, category, location, status })
+            });
+            if (response.ok) {
+                document.getElementById('eq-confirm').style.display = 'block';
+                document.getElementById('eq-name').value = '';
+                document.getElementById('eq-location').value = '';
+                await loadDashboard();
+                setTimeout(() => {
+                    document.getElementById('eq-confirm').style.display = 'none';
+                }, 3000);
+            } else {
+                const err = await response.json();
+                alert(`Failed: ${err.detail || `HTTP ${response.status}`}`);
+            }
+        } catch (err) {
+            console.error('Add equipment failed:', err);
+            alert('Could not reach server.');
+        }
+    }
+
+    // ---- Member table ----
+
+    function renderMemberTable(members) {
+        const tbody = document.getElementById('member-tbody');
+        if (members.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#777;">No members registered.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        members.forEach(m => {
+            const statusCls = m.is_active ? 'badge-active' : 'badge-inactive';
+            const statusLabel = m.is_active ? 'Active' : 'Inactive';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>M-${String(m.id).padStart(4, '0')}</td>
+                <td>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</td>
+                <td>${escapeHtml(m.email)}</td>
+                <td>${capitalize(m.membership_type)}</td>
+                <td>${formatDate(m.join_date)}</td>
+                <td><span class="badge ${statusCls}">${statusLabel}</span></td>
+                <td><button class="btn btn-secondary btn-small" disabled title="Coming soon">View</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ---- Usage Summary ----
+
+    function computeUsageSummary(reservations, equipment, members) {
+        const memberMap = {};
+        members.forEach(m => { memberMap[m.id] = m; });
+
+        // Group reservations by equipment_id, skipping cancelled
+        const byEquipment = {};
+        reservations.forEach(r => {
+            if (r.status === 'cancelled') return;
+            if (!byEquipment[r.equipment_id]) {
+                byEquipment[r.equipment_id] = { reservations: [], memberCounts: {} };
+            }
+            byEquipment[r.equipment_id].reservations.push(r);
+            byEquipment[r.equipment_id].memberCounts[r.member_id] =
+                (byEquipment[r.equipment_id].memberCounts[r.member_id] || 0) + 1;
+        });
+
+        return equipment
+            .map(e => {
+                const data = byEquipment[e.id];
+                if (!data || data.reservations.length === 0) return null;
+
+                const totalHours = data.reservations.reduce((sum, r) =>
+                    sum + (new Date(r.end_time) - new Date(r.start_time)) / 3600000, 0);
+
+                let topMemberId = null, topCount = 0;
+                for (const [mid, count] of Object.entries(data.memberCounts)) {
+                    if (count > topCount) { topCount = count; topMemberId = parseInt(mid, 10); }
+                }
+                const tm = memberMap[topMemberId];
+
+                return {
+                    equipmentName: e.name,
+                    reservationCount: data.reservations.length,
+                    totalHours: totalHours,
+                    topMember: tm ? `${tm.first_name} ${tm.last_name}` : '—'
+                };
+            })
+            .filter(row => row !== null)
+            .sort((a, b) => b.reservationCount - a.reservationCount);
+    }
+
+    function renderUsageSummary(summary) {
+        const tbody = document.getElementById('usage-tbody');
+        if (summary.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#777;">No reservation data yet.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        summary.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${escapeHtml(row.equipmentName)}</td>
+                <td>${row.reservationCount}</td>
+                <td>${row.totalHours.toFixed(1)} hrs</td>
+                <td>${escapeHtml(row.topMember)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ---- CSV Exports ----
+
+    function exportMembers() {
+        if (!cachedMembers || cachedMembers.length === 0) {
+            alert('No members to export.');
+            return;
+        }
+        const headers = ['Member ID', 'First Name', 'Last Name', 'Email', 'Membership Type', 'Join Date', 'Status'];
+        const rows = cachedMembers.map(m => [
+            `M-${String(m.id).padStart(4, '0')}`,
+            m.first_name, m.last_name, m.email,
+            capitalize(m.membership_type),
+            formatDate(m.join_date),
+            m.is_active ? 'Active' : 'Inactive'
+        ]);
+        downloadCsv('members', headers, rows);
+    }
+
+    function exportUsage() {
+        if (!cachedUsage || cachedUsage.length === 0) {
+            alert('No usage data to export.');
+            return;
+        }
+        const headers = ['Equipment', 'Total Reservations', 'Total Hours', 'Most Active User'];
+        const rows = cachedUsage.map(r => [
+            r.equipmentName, r.reservationCount, r.totalHours.toFixed(1), r.topMember
+        ]);
+        downloadCsv('usage-summary', headers, rows);
+    }
+
+    function downloadCsv(prefix, headers, rows) {
+        const csv = [headers, ...rows]
+            .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${prefix}-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // ---- Helpers ----
+
+    function formatDate(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function capitalize(s) {
+        if (!s) return '';
+        return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str ?? "";
+        return div.innerHTML;
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Environment / secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Backups
+*.bak
+
+# OS / editor cruft
+.DS_Store
+.vscode/
+*.swp

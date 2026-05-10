@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <!-- address bar title -->
+    <title>MakerSpaceHub — Home</title>
+
+   <link rel="stylesheet" href="css/stylesheet.css">
+</head>
+
+<body>
+
+    <header>
+        <div>
+            <div class="logo-text">&#9881; MakerSpaceHub</div>
+            <div class="logo-sub">University Makerspace Management System</div>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html" class="active">Home</a></li>
+            <li><a href="equipment.html">Equipment</a></li>
+            <li><a href="dashboard.html">My Dashboard</a></li>
+            <li><a href="checkin.html">Staff Check-In</a></li>
+            <li><a href="admin.html">Admin</a></li>
+        </ul>
+    </nav>
+
+    <main>
+
+        <h1 class="page-title">Welcome to MakerSpaceHub</h1>
+        <p class="page-subtitle">Your central hub for equipment reservations, check-in, and makerspace management.</p>
+
+        <div class="alert alert-info">
+            <strong>Prototype Notice:</strong> This is an IT299 capstone prototype. All data shown is simulated for demonstration purposes.
+        </div>
+
+        <!-- Quick Stats Row -->
+        <div class="grid-3 section-gap">
+            <div class="stat-box">
+                <div class="stat-number">18</div>
+                <div class="stat-label">Equipment Items Available</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">7</div>
+                <div class="stat-label">Active Reservations Today</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">34</div>
+                <div class="stat-label">Registered Members</div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid-2 section-gap">
+
+            <!-- About the Makerspace -->
+            <div class="card">
+                <h2>About the Makerspace</h2>
+                <p style="font-family: Arial, sans-serif; font-size: 0.9rem; line-height: 1.6; color: #444;">
+                    The University Makerspace is a shared workspace where students, faculty, and staff
+                    can access tools and equipment for projects in engineering, design, art, and technology.
+                    MakerSpaceHub replaces the old manual sign-in boards and paper reservation logs with a
+                    simple digital system.
+                </p>
+                <div class="mt-10">
+                    <a href="equipment.html" class="btn btn-primary">Browse Equipment</a>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <h2>Quick Actions</h2>
+                <p style="font-family: Arial, sans-serif; font-size: 0.85rem; color: #666; margin-bottom: 14px;">What would you like to do?</p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <a href="equipment.html" class="btn btn-secondary">&#128295; Reserve Equipment</a>
+                    <a href="dashboard.html" class="btn btn-secondary">&#128100; View My Reservations</a>
+                    <a href="checkin.html"   class="btn btn-secondary">&#9989; Staff Check-In Panel</a>
+                    <a href="admin.html"     class="btn btn-secondary">&#128202; Admin Dashboard</a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Recent Activity Table -->
+        <div class="card section-gap">
+            <h2>Recent Reservations</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>Equipment</th>
+                        <th>Date</th>
+                        <th>Time Slot</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Alex Rivera</td>
+                        <td>Laser Cutter A</td>
+                        <td>2026-04-25</td>
+                        <td>10:00 – 11:00 AM</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td>Morgan Lee</td>
+                        <td>3D Printer #2</td>
+                        <td>2026-04-25</td>
+                        <td>1:00 – 3:00 PM</td>
+                        <td><span class="badge badge-reserved">Upcoming</span></td>
+                    </tr>
+                    <tr>
+                        <td>Jordan Kim</td>
+                        <td>Vinyl Cutter</td>
+                        <td>2026-04-24</td>
+                        <td>2:00 – 3:00 PM</td>
+                        <td><span class="badge badge-inactive">Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td>Sam Patel</td>
+                        <td>Soldering Station</td>
+                        <td>2026-04-24</td>
+                        <td>11:00 AM – 12:00 PM</td>
+                        <td><span class="badge badge-inactive">Completed</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Hours & Info -->
+        <div class="card">
+            <h2>Makerspace Hours</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Open</th>
+                        <th>Close</th>
+                        <th>Staff On Duty</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Monday – Thursday</td><td>8:00 AM</td><td>9:00 PM</td><td>Yes</td></tr>
+                    <tr><td>Friday</td><td>8:00 AM</td><td>5:00 PM</td><td>Yes</td></tr>
+                    <tr><td>Saturday</td><td>10:00 AM</td><td>4:00 PM</td><td>Limited</td></tr>
+                    <tr><td>Sunday</td><td colspan="3">Closed</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>
+            <a href="index.html">Home</a> |
+            <a href="equipment.html">Equipment</a> |
+            <a href="dashboard.html">My Dashboard</a> |
+            <a href="checkin.html">Staff Check-In</a> |
+            <a href="admin.html">Admin</a>
+        </p>
+        <p style="margin-top: 6px;">MakerSpaceHub &mdash; IT299 Capstone Prototype &mdash; Purdue University Global</p>
+    </footer>
+
+</body>
+</html>

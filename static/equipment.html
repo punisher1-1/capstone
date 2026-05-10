@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <!-- address bar title -->
+    <title>MakerSpaceHub — Equipment</title>
+
+   <link rel="stylesheet" href="css/stylesheet.css">
+</head>
+
+<body>
+
+    <header>
+        <div>
+            <div class="logo-text">&#9881; MakerSpaceHub</div>
+            <div class="logo-sub">University Makerspace Management System</div>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="equipment.html" class="active">Equipment</a></li>
+            <li><a href="dashboard.html">My Dashboard</a></li>
+            <li><a href="checkin.html">Staff Check-In</a></li>
+            <li><a href="admin.html">Admin</a></li>
+        </ul>
+    </nav>
+
+    <main>
+
+        <h1 class="page-title">Equipment Browse &amp; Reserve</h1>
+        <p class="page-subtitle">Browse available equipment and submit a reservation request for your time slot.</p>
+
+        <!-- Filter Bar -->
+        <div class="card section-gap">
+            <h2>Filter Equipment</h2>
+            <div class="grid-3">
+                <div class="form-group">
+                    <label for="filter-category">Category</label>
+                    <select id="filter-category">
+                        <option value="">— All Categories —</option>
+                        <option>Fabrication</option>
+                        <option>Electronics</option>
+                        <option>Woodworking</option>
+                        <option>Textiles</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filter-status">Availability</label>
+                    <select id="filter-status">
+                        <option value="">— All —</option>
+                        <option>Available</option>
+                        <option>Reserved</option>
+                        <option>Maintenance</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filter-date">Date</label>
+                    <input type="date" id="filter-date" value="2026-04-25">
+                </div>
+            </div>
+            <button class="btn btn-primary">Apply Filter</button>
+        </div>
+
+        <!-- Equipment Catalog Table -->
+        <div class="card section-gap">
+            <h2>Equipment Catalog</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Equipment Name</th>
+                        <th>Category</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                   <tbody>
+                    <tr><td colspan="6" style="text-align: center; padding: 20px;">Loading equipment…</td></tr>
+                   </tbody>    
+            </table>
+        </div>
+
+        <!-- Reservation Form (shown on Reserve click) -->
+        <div class="card" id="reserve-form" style="display:none;">
+            <h2>Make a Reservation</h2>
+            <p class="alert alert-info" style="margin-bottom: 16px;">
+                Reserving: <strong id="reserve-item-name"></strong>
+            </p>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="res-member">Member Name</label>
+                    <input type="text" id="res-member" placeholder="Your full name">
+                </div>
+                <div class="form-group">
+                    <label for="res-memberid">Member ID</label>
+                    <input type="text" id="res-memberid" placeholder="e.g. M-0042">
+                </div>
+                <div class="form-group">
+                    <label for="res-date">Date</label>
+                    <input type="date" id="res-date">
+                </div>
+                <div class="form-group">
+                    <label for="res-time">Time Slot</label>
+                    <select id="res-time">
+                            <option value="8">8:00 – 9:00 AM</option>
+                            <option value="9">9:00 – 10:00 AM</option>
+                            <option value="10">10:00 – 11:00 AM</option>
+                            <option value="11">11:00 AM – 12:00 PM</option>
+                            <option value="12">12:00 – 1:00 PM</option>
+                            <option value="13">1:00 – 2:00 PM</option>
+                            <option value="14">2:00 – 3:00 PM</option>
+                            <option value="15">3:00 – 4:00 PM</option>
+                            <option value="16">4:00 – 5:00 PM</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="res-notes">Project Notes (optional)</label>
+                <textarea id="res-notes" rows="3" placeholder="Briefly describe what you'll be working on..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="submitReservation()">Submit Reservation</button>
+            &nbsp;
+            <button class="btn btn-secondary" onclick="hideReserveForm()">Cancel</button>
+
+            <div id="res-confirm" class="alert alert-success mt-10" style="display:none;">
+                &#10003; Reservation submitted! Check <a href="dashboard.html">My Dashboard</a> to view it.
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>
+            <a href="index.html">Home</a> |
+            <a href="equipment.html">Equipment</a> |
+            <a href="dashboard.html">My Dashboard</a> |
+            <a href="checkin.html">Staff Check-In</a> |
+            <a href="admin.html">Admin</a>
+        </p>
+        <p style="margin-top: 6px;">MakerSpaceHub &mdash; IT299 Capstone Prototype &mdash; Purdue University Global</p>
+    </footer>
+
+   <script>
+    // Load equipment list when page opens
+    document.addEventListener("DOMContentLoaded", loadEquipment);
+
+    async function loadEquipment() {
+        try {
+            const response = await fetch("/equipment");
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const equipment = await response.json();
+            renderTable(equipment);
+        } catch (err) {
+            console.error("Failed to load equipment:", err);
+            document.querySelector("table tbody").innerHTML =
+                `<tr><td colspan="6" style="color:#c00;">
+                    Could not load equipment. Check the browser console.
+                </td></tr>`;
+        }
+    }
+
+    function renderTable(equipment) {
+        const tbody = document.querySelector("table tbody");
+        tbody.innerHTML = "";
+        equipment.forEach(item => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>EQ-${String(item.id).padStart(3, '0')}</td>
+                <td>${escapeHtml(item.name)}</td>
+                <td>${escapeHtml(item.category)}</td>
+                <td>${escapeHtml(item.location || '—')}</td>
+                <td>${statusBadge(item.status)}</td>
+                <td>${actionButton(item)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function statusBadge(status) {
+        const label = status.charAt(0).toUpperCase() + status.slice(1);
+        return `<span class="badge badge-${status}">${label}</span>`;
+    }
+
+    function actionButton(item) {
+        if (item.status === "available") {
+            return `<button class="btn btn-secondary btn-small"
+                onclick="showReserveForm(${item.id}, '${escapeAttr(item.name)}')">Reserve</button>`;
+        }
+        if (item.status === "reserved") {
+            return `<button class="btn btn-primary btn-small" disabled>Unavailable</button>`;
+        }
+        return `<button class="btn btn-primary btn-small" disabled>Out of Service</button>`;
+    }
+
+    // ---- Reservation form (UI only; submit wiring in next step) ----
+
+    function showReserveForm(itemId, itemName) {
+        document.getElementById('reserve-item-name').textContent = itemName;
+        document.getElementById('reserve-form').dataset.equipmentId = itemId;
+        document.getElementById('reserve-form').style.display = 'block';
+        document.getElementById('res-confirm').style.display = 'none';
+        document.getElementById('reserve-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function hideReserveForm() {
+        document.getElementById('reserve-form').style.display = 'none';
+    }
+    // Submit the reservation form
+    async function submitReservation() {
+    // Read inputs
+    const memberIdInput = document.getElementById('res-memberid').value.trim();
+    const date = document.getElementById('res-date').value;
+    const hour = parseInt(document.getElementById('res-time').value, 10);
+    const notes = document.getElementById('res-notes').value.trim();
+    const equipmentId = parseInt(
+        document.getElementById('reserve-form').dataset.equipmentId,
+        10
+    );
+
+    // Client-side validation
+    if (!memberIdInput || !date || isNaN(hour)) {
+        alert('Please fill in Member ID, date, and time slot.');
+        return;
+    }
+
+    // Strip non-digits so "M-0042" or "42" both parse to 42
+    const memberId = parseInt(memberIdInput.replace(/\D/g, ''), 10);
+    if (isNaN(memberId)) {
+        alert('Member ID must contain a number.');
+        return;
+    }
+
+    // Build ISO datetimes (naive — server interprets in its own timezone)
+    const startTime = `${date}T${String(hour).padStart(2, '0')}:00:00`;
+    const endTime   = `${date}T${String(hour + 1).padStart(2, '0')}:00:00`;
+
+    // Request body — field names match the backend Pydantic model
+    const body = {
+        member_id: memberId,
+        equipment_id: equipmentId,
+        start_time: startTime,
+        end_time: endTime,
+        notes: notes || null
+    };
+
+    try {
+        const response = await fetch('/reservations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (response.ok) {
+            // 201 Created
+            document.getElementById('res-confirm').style.display = 'block';
+            document.getElementById('res-notes').value = '';
+        } else if (response.status === 409) {
+            const err = await response.json();
+            alert(`Time slot conflict: ${err.detail || 'This slot is already reserved.'}`);
+        } else if (response.status === 404) {
+            const err = await response.json();
+            alert(`Not found: ${err.detail || 'Member or equipment does not exist.'}`);
+        } else if (response.status === 400 || response.status === 422) {
+            const err = await response.json();
+            const msg = typeof err.detail === 'string'
+                ? err.detail
+                : JSON.stringify(err.detail);
+            alert(`Validation error: ${msg}`);
+        } else {
+            alert(`Server error (HTTP ${response.status}).`);
+        }
+    } catch (err) {
+        console.error('Failed to submit reservation:', err);
+        alert('Could not reach the server. Check your network connection.');
+    }
+}
+
+    // ---- Helpers ----
+
+    function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str ?? "";
+        return div.innerHTML;
+    }
+
+    function escapeAttr(str) {
+        return (str ?? "").replace(/'/g, "&#39;");
+    }
+</script>
+
+</body>
+</html>

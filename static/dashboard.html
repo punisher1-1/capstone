@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <!-- address bar title -->
+    <title>MakerSpaceHub — My Dashboard</title>
+
+    <link rel="stylesheet" href="css/stylesheet.css">
+</head>
+
+<body>
+
+    <header>
+        <div>
+            <div class="logo-text">&#9881; MakerSpaceHub</div>
+            <div class="logo-sub">University Makerspace Management System</div>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="equipment.html">Equipment</a></li>
+            <li><a href="dashboard.html" class="active">My Dashboard</a></li>
+            <li><a href="checkin.html">Staff Check-In</a></li>
+            <li><a href="admin.html">Admin</a></li>
+        </ul>
+    </nav>
+
+    <main>
+
+        <h1 class="page-title">Member Dashboard</h1>
+            <div class="form-group" style="max-width: 400px;">
+                <label for="member-selector">View as:</label>
+                <select id="member-selector"><option>Loading members…</option></select>
+            </div>
+        <p class="page-subtitle" id="welcome-banner">Loading…</p>
+        <!-- Member Stats -->
+        <div class="grid-3 section-gap">
+            <div class="stat-box">
+                <div class="stat-number" id="stat-upcoming">—</div>
+                <div class="stat-label">Upcoming Reservations</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-total">—</div>
+                <div class="stat-label">Total Sessions This Term</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-maintenance">0</div>
+                <div class="stat-label">Open Maintenance Reports</div>
+            </div>
+        </div>
+
+        <!-- Upcoming Reservations -->
+        <div class="card section-gap">
+            <h2>Upcoming Reservations</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Reservation ID</th>
+                        <th>Equipment</th>
+                        <th>Date</th>
+                        <th>Time Slot</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="upcoming-tbody">
+                     <tr><td colspan="7" style="text-align:center; padding:20px;">Loading…</td></tr>
+                </tbody>
+            </table>
+            <div class="mt-10">
+                <a href="equipment.html" class="btn btn-secondary">+ New Reservation</a>
+            </div>
+        </div>
+
+        <!-- Reservation History -->
+        <div class="card section-gap">
+            <h2>Reservation History</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Reservation ID</th>
+                        <th>Equipment</th>
+                        <th>Date</th>
+                        <th>Time Slot</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                    <tbody id="history-tbody">
+                        <tr><td colspan="5" style="text-align:center; padding:20px;">Loading…</td></tr>
+                    </tbody>
+            </table>
+        </div>
+
+        <!-- Report Issue -->
+        <div class="card">
+            <h2>Submit a Maintenance Report</h2>
+            <p style="font-family: Arial, sans-serif; font-size: 0.88rem; color: #555; margin-bottom: 14px;">
+                Noticed a problem with a piece of equipment? Let the staff know.
+            </p>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="maint-equipment">Equipment</label>
+                    <select id="maint-equipment">
+                        <option>— Select Equipment —</option>
+                        <option>Laser Cutter A</option>
+                        <option>3D Printer #1</option>
+                        <option>3D Printer #2</option>
+                        <option>Vinyl Cutter</option>
+                        <option>Band Saw</option>
+                        <option>CNC Router</option>
+                        <option>Soldering Station</option>
+                        <option>Oscilloscope</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="maint-severity">Severity</label>
+                    <select id="maint-severity">
+                        <option>Low — Minor issue, still usable</option>
+                        <option>Medium — Impairs function</option>
+                        <option>High — Equipment unusable / safety concern</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="maint-notes">Description</label>
+                <textarea id="maint-notes" rows="3" placeholder="Describe the issue in detail..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="submitMaintenance()">Submit Report</button>
+
+            <div id="maint-confirm" class="alert alert-success mt-10" style="display:none;">
+                &#10003; Maintenance report submitted. Staff have been notified.
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>
+            <a href="index.html">Home</a> |
+            <a href="equipment.html">Equipment</a> |
+            <a href="dashboard.html">My Dashboard</a> |
+            <a href="checkin.html">Staff Check-In</a> |
+            <a href="admin.html">Admin</a>
+        </p>
+        <p style="margin-top: 6px;">MakerSpaceHub &mdash; IT299 Capstone Prototype &mdash; Purdue University Global</p>
+    </footer>
+
+<script>
+    let allMembers = [];
+    let currentMemberId = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadMembers();
+        if (allMembers.length > 0) {
+            currentMemberId = allMembers[0].id;
+            document.getElementById('member-selector').value = currentMemberId;
+            await loadDashboard();
+        }
+    });
+
+    async function loadMembers() {
+        try {
+            const response = await fetch('/members');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            allMembers = await response.json();
+
+            const selector = document.getElementById('member-selector');
+            selector.innerHTML = '';
+            allMembers.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = `${m.first_name} ${m.last_name}`;
+                selector.appendChild(opt);
+            });
+            selector.addEventListener('change', () => {
+                currentMemberId = parseInt(selector.value, 10);
+                loadDashboard();
+            });
+        } catch (err) {
+            console.error('Failed to load members:', err);
+            document.getElementById('member-selector').innerHTML =
+                '<option>Error loading members</option>';
+        }
+    }
+
+    async function loadDashboard() {
+        if (!currentMemberId) return;
+
+        try {
+            // Fetch all three endpoints in parallel
+            const [memberRes, reservationsRes, equipmentRes] = await Promise.all([
+                fetch(`/members/${currentMemberId}`),
+                fetch('/reservations'),
+                fetch('/equipment')
+            ]);
+            if (!memberRes.ok || !reservationsRes.ok || !equipmentRes.ok) {
+                throw new Error('One or more endpoints failed');
+            }
+            const [member, allReservations, allEquipment] = await Promise.all([
+                memberRes.json(), reservationsRes.json(), equipmentRes.json()
+            ]);
+
+            // Build equipment id → equipment lookup for O(1) location lookup
+            const equipmentMap = {};
+            allEquipment.forEach(e => { equipmentMap[e.id] = e; });
+
+            // Filter to this member's reservations, then split into upcoming vs. history
+            const myReservations = allReservations.filter(r => r.member_id === currentMemberId);
+            const now = new Date();
+
+            const upcoming = myReservations
+                .filter(r => new Date(r.start_time) >= now
+                          && r.status !== 'cancelled'
+                          && r.status !== 'completed')
+                .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+
+            const history = myReservations
+                .filter(r => new Date(r.start_time) < now
+                          || r.status === 'completed'
+                          || r.status === 'cancelled')
+                .sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
+
+            renderWelcome(member);
+            renderUpcoming(upcoming, equipmentMap);
+            renderHistory(history);
+            renderStats(upcoming.length, myReservations.length);
+
+        } catch (err) {
+            console.error('Failed to load dashboard:', err);
+            document.getElementById('welcome-banner').textContent =
+                'Error loading dashboard. Check console.';
+        }
+    }
+
+    function renderWelcome(member) {
+        const status = member.is_active ? 'Active' : 'Inactive';
+        const statusClass = member.is_active ? 'badge-active' : 'badge-inactive';
+        document.getElementById('welcome-banner').innerHTML =
+            `Welcome back, <strong>${escapeHtml(member.first_name)} ${escapeHtml(member.last_name)}</strong>
+             &mdash; Member ID: M-${String(member.id).padStart(4, '0')}
+             &mdash; Status: <span class="badge ${statusClass}">${status}</span>`;
+    }
+
+    function renderUpcoming(reservations, equipmentMap) {
+        const tbody = document.getElementById('upcoming-tbody');
+        if (reservations.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#777;">No upcoming reservations.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        reservations.forEach(r => {
+            const equipment = equipmentMap[r.equipment_id];
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${formatReservationId(r.id)}</td>
+                <td>${escapeHtml(r.equipment_name || '—')}</td>
+                <td>${formatDate(r.start_time)}</td>
+                <td>${formatTimeSlot(r.start_time, r.end_time)}</td>
+                <td>${escapeHtml(equipment?.location || '—')}</td>
+                <td>${statusBadge(r.status)}</td>
+                <td><button class="btn btn-danger btn-small" onclick="cancelReservation(${r.id})">Cancel</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderHistory(reservations) {
+        const tbody = document.getElementById('history-tbody');
+        if (reservations.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#777;">No reservation history.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        reservations.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${formatReservationId(r.id)}</td>
+                <td>${escapeHtml(r.equipment_name || '—')}</td>
+                <td>${formatDate(r.start_time)}</td>
+                <td>${formatTimeSlot(r.start_time, r.end_time)}</td>
+                <td>${statusBadge(r.status)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderStats(upcomingCount, totalCount) {
+        document.getElementById('stat-upcoming').textContent = upcomingCount;
+        document.getElementById('stat-total').textContent = totalCount;
+    }
+
+    async function cancelReservation(id) {
+        if (!confirm(`Cancel reservation ${formatReservationId(id)}? This cannot be undone.`)) return;
+        try {
+            const response = await fetch(`/reservations/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                await loadDashboard();
+            } else {
+                alert(`Failed to cancel: HTTP ${response.status}`);
+            }
+        } catch (err) {
+            console.error('Cancel failed:', err);
+            alert('Could not reach server.');
+        }
+    }
+
+    // Maintenance form — kept as UI placeholder until you build the maintenance entity
+    function submitMaintenance() {
+        const equip = document.getElementById('maint-equipment').value;
+        const notes = document.getElementById('maint-notes').value.trim();
+        if (equip === '— Select Equipment —' || !notes) {
+            alert('Please select equipment and describe the issue.');
+            return;
+        }
+        document.getElementById('maint-confirm').style.display = 'block';
+    }
+
+    // ---- Helpers ----
+
+    function formatReservationId(id) {
+        return `RES-${String(id).padStart(4, '0')}`;
+    }
+
+    function formatDate(iso) {
+        const d = new Date(iso);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function formatTimeSlot(startIso, endIso) {
+        const fmt = (iso) => {
+            const d = new Date(iso);
+            let h = d.getHours();
+            const m = d.getMinutes();
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            return `${h}:${String(m).padStart(2, '0')} ${ampm}`;
+        };
+        return `${fmt(startIso)} – ${fmt(endIso)}`;
+    }
+
+    function statusBadge(status) {
+        const map = {
+            pending:   { cls: 'badge-reserved', label: 'Pending' },
+            confirmed: { cls: 'badge-active',   label: 'Confirmed' },
+            cancelled: { cls: 'badge-inactive', label: 'Cancelled' },
+            completed: { cls: 'badge-inactive', label: 'Completed' }
+        };
+        const m = map[status] || { cls: 'badge-inactive', label: status };
+        return `<span class="badge ${m.cls}">${m.label}</span>`;
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str ?? "";
+        return div.innerHTML;
+    }
+</script>
+
+</body>
+</html>
