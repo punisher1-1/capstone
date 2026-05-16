@@ -9,7 +9,8 @@ from contextlib import asynccontextmanager
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from fastapi import FastAPI, Depends, Form, HTTPException, status
+from fastapi import FastAPI, Depends, Form, HTTPException, Query, status
+from decimal import Decimal 
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr, Field
@@ -548,3 +549,144 @@ def check_out(checkin_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(checkin)
     return checkin
+
+"""
+Consumable Pydantic schemas + CRUD routes for main.py.
+
+"""
+
+# =================================================================
+# Pydantic Schemas — Consumable
+# (Paste after the CheckIn schemas block.)
+# =================================================================
+
+class ConsumableBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100,
+                      description="Item name, e.g. 'PLA Filament White 1.75mm'")
+    category: str = Field(..., min_length=1, max_length=50,
+                          description="Category, e.g. 'Filament', 'Wood', 'Electronics'")
+    unit: str = Field(..., min_length=1, max_length=20,
+                      description="Unit of measure: kg, sheet, roll, piece, meter")
+    quantity_on_hand: Decimal = Field(
+        ..., ge=0, max_digits=10, decimal_places=2,
+        description="Current stock on hand, in `unit` units"
+    )
+    low_stock_threshold: Decimal = Field(
+        ..., ge=0, max_digits=10, decimal_places=2,
+        description="Alert fires when quantity_on_hand falls at or below this"
+    )
+
+
+class ConsumableCreate(ConsumableBase):
+    pass
+
+
+class ConsumableUpdate(BaseModel):
+    """Partial update — every field optional. Common use is restocking
+    (PATCH with just quantity_on_hand)."""
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    category: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    unit: Optional[str] = Field(default=None, min_length=1, max_length=20)
+    quantity_on_hand: Optional[Decimal] = Field(
+        default=None, ge=0, max_digits=10, decimal_places=2
+    )
+    low_stock_threshold: Optional[Decimal] = Field(
+        default=None, ge=0, max_digits=10, decimal_places=2
+    )
+
+
+class ConsumableRead(ConsumableBase):
+    id: int
+    last_updated: datetime
+    is_low_stock: bool   # populated from the Consumable.is_low_stock @property
+    model_config = {"from_attributes": True}
+
+
+# =================================================================
+# Consumable CRUD
+# (Paste after the CheckIn routes block.)
+# =================================================================
+@app.get("/consumables", response_model=list[ConsumableRead])
+def list_consumables(
+    category: Optional[str] = None,
+    low_stock_only: bool = False,
+    db: Session = Depends(get_db),
+):
+    """
+    List consumables, ordered by category then name.
+
+    Query parameters:
+      category=Filament       → filter to one category
+      low_stock_only=true     → only items at or below threshold (reorder list)
+    """
+    stmt = select(models.Consumable).order_by(
+        models.Consumable.category,
+        models.Consumable.name,
+    )
+    if category:
+        stmt = stmt.where(models.Consumable.category == category)
+    if low_stock_only:
+        # SQL-level filter — much faster than fetching all rows and
+        # filtering in Python, especially as inventory grows.
+        stmt = stmt.where(
+            models.Consumable.quantity_on_hand
+            <= models.Consumable.low_stock_threshold
+        )
+    return db.scalars(stmt).all()
+
+
+@app.get("/consumables/{consumable_id}", response_model=ConsumableRead)
+def get_consumable(consumable_id: int, db: Session = Depends(get_db)):
+    consumable = db.get(models.Consumable, consumable_id)
+    if consumable is None:
+        raise HTTPException(status_code=404,
+                            detail=f"Consumable {consumable_id} not found")
+    return consumable
+
+
+@app.post("/consumables", response_model=ConsumableRead,
+          status_code=status.HTTP_201_CREATED)
+def create_consumable(item: ConsumableCreate, db: Session = Depends(get_db)):
+    consumable = models.Consumable(**item.model_dump())
+    db.add(consumable)
+    db.commit()
+    db.refresh(consumable)
+    return consumable
+
+
+@app.patch("/consumables/{consumable_id}", response_model=ConsumableRead)
+def update_consumable(consumable_id: int, item: ConsumableUpdate,
+                      db: Session = Depends(get_db)):
+    """Partial update. Common use: PATCH with just quantity_on_hand to restock."""
+    consumable = db.get(models.Consumable, consumable_id)
+    if consumable is None:
+        raise HTTPException(status_code=404,
+                            detail=f"Consumable {consumable_id} not found")
+
+    data = item.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    for key, value in data.items():
+        setattr(consumable, key, value)
+
+    # last_updated is bumped by the Postgres trigger trg_consumable_touch().
+    # Don't set it here — one source of truth.
+    db.commit()
+    db.refresh(consumable)
+    return consumable
+
+
+@app.delete("/consumables/{consumable_id}",
+            status_code=status.HTTP_204_NO_CONTENT)
+def delete_consumable(consumable_id: int, db: Session = Depends(get_db)):
+    """Hard delete. Equipment uses soft-delete (status='retired'); consumables
+    don't have a status field, so a hard delete is fine — empty items can
+    just be removed."""
+    consumable = db.get(models.Consumable, consumable_id)
+    if consumable is None:
+        raise HTTPException(status_code=404,
+                            detail=f"Consumable {consumable_id} not found")
+    db.delete(consumable)
+    db.commit()
+    return None

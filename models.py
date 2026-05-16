@@ -122,3 +122,85 @@ class CheckIn(Base):
     def __repr__(self) -> str:
         return (f"<CheckIn id={self.id} member={self.member_id} "
                 f"checked_out={self.check_out_time is not None}>")
+"""
+Consumable ORM model — paste into models.py alongside Member, Equipment, etc.
+
+Why SQLAlchemy 2.0 mapped_column style:
+  - Matches the existing models.py pattern.
+  - Gives static type information (Mapped[int]) so editors and mypy can
+    catch silly mistakes like assigning a str to an int column.
+  - Cleaner than the legacy Column(...) attribute style.
+
+Why we keep the column name `consumable_id` (instead of plain `id`):
+  - The Unit 4 ERD and CRUD plan reference `consumable_id` by name.
+  - SRS traceability is easier when the column name matches the design doc.
+  - Note: this departs slightly from the other 4 tables, which use `id`.
+    The Python attribute is still called `consumable_id` here for clarity,
+    but you can map it as `id: Mapped[int] = mapped_column("consumable_id", ...)`
+    if you want internal consistency. Pick one and update the wiki entity page.
+"""
+
+from datetime import datetime
+from decimal import Decimal
+
+from sqlalchemy import String, Numeric, DateTime, CheckConstraint, func
+from sqlalchemy.orm import Mapped, mapped_column
+
+from database import Base  # adjust import to match your project (app.database, etc.)
+
+
+class Consumable(Base):
+    """A restockable supply item (filament, plywood, vinyl, etc.).
+
+    Tracked by quantity_on_hand vs low_stock_threshold so staff get an alert
+    when something needs reordering. Distinct from Equipment (which is
+    reservable and durable).
+    """
+
+    __tablename__ = "consumable_inventory"
+
+    id: Mapped[int] = mapped_column("consumable_id", primary_key=True)
+
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    category: Mapped[str] = mapped_column(String(50), nullable=False)
+    unit: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    # Numeric(10, 2) maps to DECIMAL(10,2) in Postgres. Stored as Decimal
+    # in Python — do NOT convert to float on the way in/out, or you'll
+    # introduce rounding drift over many restocks.
+    quantity_on_hand: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+        default=Decimal("0"),
+    )
+    low_stock_threshold: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+        default=Decimal("0"),
+    )
+
+    # server_default=func.now() means Postgres sets the timestamp on INSERT.
+    # The trigger in the migration handles UPDATE.
+    last_updated: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    # Mirror the SQL CHECK constraints so SQLAlchemy DDL stays in sync if
+    # you ever regenerate the schema via Base.metadata.create_all().
+    __table_args__ = (
+        CheckConstraint("quantity_on_hand >= 0", name="qty_non_negative"),
+        CheckConstraint("low_stock_threshold >= 0", name="threshold_non_negative"),
+    )
+
+    @property
+    def is_low_stock(self) -> bool:
+        """Convenience flag for the admin UI."""
+        return self.quantity_on_hand <= self.low_stock_threshold
+
+def __repr__(self) -> str:
+    return (
+        f"<Consumable id={self.id} "
+        f"name={self.name!r} qty={self.quantity_on_hand} {self.unit}>"
+    )

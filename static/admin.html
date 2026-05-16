@@ -42,15 +42,15 @@
         <!-- System Stats -->
         <div class="grid-3 section-gap">
             <div class="stat-box">
-                <div class="stat-number" id="stat-members">—</div>  
+                <div class="stat-number" id="stat-members">—</div>
                 <div class="stat-label">Registered Members</div>
             </div>
             <div class="stat-box">
-                <div class="stat-number" id="stat-equipment">—</div> 
+                <div class="stat-number" id="stat-equipment">—</div>
                 <div class="stat-label">Equipment Items</div>
             </div>
             <div class="stat-box">
-                <div class="stat-number" id="stat-active">—</div> 
+                <div class="stat-number" id="stat-active">—</div>
                 <div class="stat-label">Members Currently In Space</div>
             </div>
             <div class="stat-box">
@@ -58,11 +58,11 @@
                 <div class="stat-label">Reservations Today</div>
             </div>
             <div class="stat-box">
-                <div class="stat-number" id="stat-tickets">0</div> 
+                <div class="stat-number" id="stat-tickets">0</div>
                 <div class="stat-label">Open Maintenance Tickets</div>
             </div>
             <div class="stat-box">
-                <div class="stat-number" id="stat-out">—</div> 
+                <div class="stat-number" id="stat-out">—</div>
                 <div class="stat-label">Equipment Out of Service</div>
             </div>
         </div>
@@ -100,22 +100,13 @@
                         <input type="text" id="eq-name" placeholder="e.g. Laser Cutter B">
                     </div>
                     <div class="form-group">
-                        <div class="form-group">
-                            <label for="eq-category">Category</label>
-                            <select id="eq-category">
-                                <option>Fabrication</option>
-                                <option>Electronics</option>
-                                <option>Woodworking</option>
-                                <option>Textiles</option>
-                                <option>Other</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="eq-status">Initial Status</label>
-                        <select id="eq-status">
-                            <option value="available">Available</option>
-                            <option value="maintenance">Maintenance</option>
+                        <label for="eq-category">Category</label>
+                        <select id="eq-category">
+                            <option>Fabrication</option>
+                            <option>Electronics</option>
+                            <option>Woodworking</option>
+                            <option>Textiles</option>
+                            <option>Other</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -125,9 +116,8 @@
                     <div class="form-group">
                         <label for="eq-status">Initial Status</label>
                         <select id="eq-status">
-                            <option>Available</option>
-                            <option>Maintenance</option>
-                            <option>Out of Service</option>
+                            <option value="available">Available</option>
+                            <option value="maintenance">Maintenance</option>
                         </select>
                     </div>
                 </div>
@@ -137,6 +127,106 @@
 
                 <div id="eq-confirm" class="alert alert-success mt-10" style="display:none;">
                     &#10003; Equipment record added successfully.
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- Consumable Inventory — NEW SECTION                            -->
+        <!-- Sits as a top-level card between Equipment Inventory and      -->
+        <!-- Maintenance Tickets so it stays prominent on the page.        -->
+        <!-- ============================================================ -->
+        <div class="card section-gap" id="consumables-section">
+
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h2 style="margin:0;">Consumable Inventory</h2>
+                    <p class="page-subtitle" style="margin:4px 0 0;">
+                        Track restockable supplies. Items at or below threshold are flagged for reorder.
+                    </p>
+                </div>
+                <div>
+                    <button class="btn btn-secondary btn-small" onclick="exportConsumables()">Export CSV</button>
+                    <button class="btn btn-primary btn-small" onclick="showAddConsumable()">+ Add Item</button>
+                </div>
+            </div>
+
+            <div id="consumable-low-alert" class="alert alert-warning mt-10" style="display:none;">
+                <strong id="consumable-low-count">0</strong> consumable<span id="consumable-low-plural">s</span>
+                at or below the low-stock threshold.
+                <a href="#" onclick="filterConsumablesLow(); return false;">View only those →</a>
+            </div>
+
+            <div class="form-group mt-10" style="display:flex; gap:12px; align-items:flex-end;">
+                <div style="flex:0 0 200px;">
+                    <label for="consumable-category-filter">Category</label>
+                    <select id="consumable-category-filter" onchange="loadConsumables()">
+                        <option value="">All categories</option>
+                    </select>
+                </div>
+                <div style="flex:0 0 160px;">
+                    <label style="display:block;">
+                        <input type="checkbox" id="consumable-low-only" onchange="loadConsumables()">
+                        Low stock only
+                    </label>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Item</th>
+                        <th>Category</th>
+                        <th>On Hand</th>
+                        <th>Threshold</th>
+                        <th>Status</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="consumables-tbody">
+                    <tr><td colspan="8" style="text-align:center; padding:20px;">Loading inventory…</td></tr>
+                </tbody>
+            </table>
+
+            <div id="add-consumable-form" style="display:none; margin-top: 20px;">
+                <hr style="margin-bottom: 16px;">
+                <h2>Add Consumable</h2>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="cn-name">Item Name</label>
+                        <input type="text" id="cn-name" placeholder="e.g., PLA Filament Red 1.75mm">
+                    </div>
+                    <div class="form-group">
+                        <label for="cn-category">Category</label>
+                        <input type="text" id="cn-category" placeholder="Filament / Wood / Electronics / Vinyl / Acrylic">
+                    </div>
+                    <div class="form-group">
+                        <label for="cn-unit">Unit</label>
+                        <select id="cn-unit">
+                            <option>kg</option>
+                            <option>sheet</option>
+                            <option>roll</option>
+                            <option>piece</option>
+                            <option>meter</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cn-qty">Quantity on Hand</label>
+                        <input type="number" id="cn-qty" min="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="cn-threshold">Low-Stock Threshold</label>
+                        <input type="number" id="cn-threshold" min="0" step="0.01" value="0">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="addConsumable()">Save Item</button>
+                &nbsp;
+                <button class="btn btn-secondary" onclick="hideAddConsumable()">Cancel</button>
+
+                <div id="cn-confirm" class="alert alert-success mt-10" style="display:none;">
+                    &#10003; Consumable added successfully.
                 </div>
             </div>
         </div>
@@ -184,7 +274,7 @@
                 </tbody>
             </table>
             <div class="mt-10 text-right">
-                <button class="btn btn-primary btn-small">Export Member List (CSV)</button>
+                <button class="btn btn-primary btn-small" onclick="exportMembers()">Export Member List (CSV)</button>
             </div>
         </div>
 
@@ -205,7 +295,6 @@
                 </tbody>
             </table>
             <div class="mt-10 text-right">
-                <button class="btn btn-primary btn-small" onclick="exportMembers()">Export Member List (CSV)</button>
                 <button class="btn btn-primary btn-small" onclick="exportUsage()">Export Report (CSV)</button>
             </div>
         </div>
@@ -226,6 +315,7 @@
     <script>
     let cachedMembers = [];
     let cachedUsage = [];
+    let cachedConsumables = [];
 
     document.addEventListener('DOMContentLoaded', loadDashboard);
 
@@ -255,6 +345,10 @@
             const usage = computeUsageSummary(reservations, equipment, members);
             cachedUsage = usage;
             renderUsageSummary(usage);
+
+            // Consumables fetch runs after the main dashboard load so it
+            // doesn't block the other sections — they show first.
+            await loadConsumables();
 
         } catch (err) {
             console.error('Failed to load admin dashboard:', err);
@@ -454,6 +548,234 @@
         });
     }
 
+    // ============================================================
+    // Consumables — load, render, mutate
+    // Uses the same fetch() + try/catch pattern as the equipment
+    // block above so it slots into your existing style.
+    // ============================================================
+
+    async function loadConsumables() {
+        try {
+            const category = document.getElementById('consumable-category-filter').value;
+            const lowOnly  = document.getElementById('consumable-low-only').checked;
+
+            // Build the query string for the filtered request
+            const params = new URLSearchParams();
+            if (category) params.set('category', category);
+            if (lowOnly)  params.set('low_stock_only', 'true');
+            const qs = params.toString();
+
+            let items, allItems;
+            if (qs) {
+                // Filter active — fetch filtered AND unfiltered (for dropdown + banner)
+                const [filteredRes, allRes] = await Promise.all([
+                    fetch('/consumables?' + qs),
+                    fetch('/consumables')
+                ]);
+                if (!filteredRes.ok || !allRes.ok) {
+                    throw new Error(`Consumables fetch failed: ${filteredRes.status}/${allRes.status}`);
+                }
+                [items, allItems] = await Promise.all([filteredRes.json(), allRes.json()]);
+            } else {
+                // No filter — single fetch, reuse for both
+                // (Avoids "body stream already read" from calling .json() twice on one Response.)
+                const res = await fetch('/consumables');
+                if (!res.ok) throw new Error(`Consumables fetch failed: ${res.status}`);
+                items = await res.json();
+                allItems = items;
+            }
+            cachedConsumables = items;
+
+            renderConsumablesTable(items);
+            renderConsumableFilter(allItems);
+            renderConsumableLowAlert(allItems);
+
+        } catch (err) {
+            console.error('Failed to load consumables:', err);
+            document.getElementById('consumables-tbody').innerHTML =
+                '<tr><td colspan="8" style="color:#c00;">Could not load inventory. Check console.</td></tr>';
+        }
+    }
+
+    function renderConsumablesTable(items) {
+        const tbody = document.getElementById('consumables-tbody');
+        if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#777;">No consumables match the current filter.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        items.forEach(c => {
+            // trim trailing zeros: 8.00 → "8", 1.75 stays "1.75"
+            const fmt = (n) => parseFloat(n).toString();
+            const updated = c.last_updated ? c.last_updated.slice(0, 16).replace('T', ' ') : '—';
+            const badge = c.is_low_stock
+                ? '<span class="badge badge-maintenance">Low Stock</span>'
+                : '<span class="badge badge-available">OK</span>';
+
+            const tr = document.createElement('tr');
+            if (c.is_low_stock) tr.style.background = '#fdf3e0';
+            tr.innerHTML = `
+                <td>CN-${String(c.id).padStart(3, '0')}</td>
+                <td>${escapeHtml(c.name)}</td>
+                <td>${escapeHtml(c.category)}</td>
+                <td>${fmt(c.quantity_on_hand)} ${escapeHtml(c.unit)}</td>
+                <td>${fmt(c.low_stock_threshold)} ${escapeHtml(c.unit)}</td>
+                <td>${badge}</td>
+                <td style="font-size:0.82rem; color:#666;">${updated}</td>
+                <td>
+                    <button class="btn btn-primary btn-small" onclick="restockConsumable(${c.id})">Restock</button>
+                    <button class="btn btn-secondary btn-small" onclick="editThreshold(${c.id})">Threshold</button>
+                    <button class="btn btn-danger btn-small" onclick="deleteConsumable(${c.id})">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderConsumableFilter(allItems) {
+        // Only populate the dropdown once — preserve the user's selection
+        const filterSel = document.getElementById('consumable-category-filter');
+        if (filterSel.options.length > 1) return;
+        const cats = [...new Set(allItems.map(c => c.category))].sort();
+        filterSel.innerHTML = '<option value="">All categories</option>'
+            + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    }
+
+    function renderConsumableLowAlert(allItems) {
+        const lowCount = allItems.filter(c => c.is_low_stock).length;
+        const alertEl = document.getElementById('consumable-low-alert');
+        document.getElementById('consumable-low-count').textContent = lowCount;
+        document.getElementById('consumable-low-plural').textContent = lowCount === 1 ? '' : 's';
+        alertEl.style.display = lowCount > 0 ? 'block' : 'none';
+    }
+
+    function filterConsumablesLow() {
+        document.getElementById('consumable-low-only').checked = true;
+        loadConsumables();
+    }
+
+    // ---- Add Consumable form ----
+
+    function showAddConsumable() {
+        document.getElementById('add-consumable-form').style.display = 'block';
+        document.getElementById('cn-confirm').style.display = 'none';
+    }
+
+    function hideAddConsumable() {
+        document.getElementById('add-consumable-form').style.display = 'none';
+    }
+
+    async function addConsumable() {
+        const body = {
+            name:                document.getElementById('cn-name').value.trim(),
+            category:            document.getElementById('cn-category').value.trim(),
+            unit:                document.getElementById('cn-unit').value,
+            quantity_on_hand:    parseFloat(document.getElementById('cn-qty').value) || 0,
+            low_stock_threshold: parseFloat(document.getElementById('cn-threshold').value) || 0,
+        };
+        if (!body.name || !body.category) {
+            alert('Name and category are required.');
+            return;
+        }
+        try {
+            const response = await fetch('/consumables', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (response.ok) {
+                document.getElementById('cn-confirm').style.display = 'block';
+                document.getElementById('cn-name').value = '';
+                document.getElementById('cn-category').value = '';
+                document.getElementById('cn-qty').value = '0';
+                document.getElementById('cn-threshold').value = '0';
+                await loadConsumables();
+                setTimeout(() => {
+                    hideAddConsumable();
+                    document.getElementById('cn-confirm').style.display = 'none';
+                }, 1200);
+            } else {
+                const err = await response.json();
+                alert(`Failed: ${err.detail || `HTTP ${response.status}`}`);
+            }
+        } catch (err) {
+            console.error('Add consumable failed:', err);
+            alert('Could not reach server.');
+        }
+    }
+
+    // ---- Restock / Threshold / Delete ----
+
+    async function restockConsumable(id) {
+        const cur = cachedConsumables.find(c => c.id === id);
+        const newQty = prompt(
+            `Update quantity for "${cur?.name}".\n` +
+            `Current: ${cur?.quantity_on_hand} ${cur?.unit}\n\n` +
+            `Enter new quantity:`,
+            cur?.quantity_on_hand
+        );
+        if (newQty === null) return;
+        const parsed = parseFloat(newQty);
+        if (isNaN(parsed) || parsed < 0) {
+            alert('Quantity must be a non-negative number.');
+            return;
+        }
+        await patchConsumable(id, { quantity_on_hand: parsed });
+    }
+
+    async function editThreshold(id) {
+        const cur = cachedConsumables.find(c => c.id === id);
+        const newThr = prompt(
+            `Set low-stock threshold for "${cur?.name}".\n` +
+            `Current: ${cur?.low_stock_threshold} ${cur?.unit}\n\n` +
+            `Enter new threshold:`,
+            cur?.low_stock_threshold
+        );
+        if (newThr === null) return;
+        const parsed = parseFloat(newThr);
+        if (isNaN(parsed) || parsed < 0) {
+            alert('Threshold must be a non-negative number.');
+            return;
+        }
+        await patchConsumable(id, { low_stock_threshold: parsed });
+    }
+
+    async function patchConsumable(id, body) {
+        try {
+            const response = await fetch('/consumables/' + id, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (response.ok) {
+                await loadConsumables();
+            } else {
+                const err = await response.json();
+                alert(`Update failed: ${err.detail || `HTTP ${response.status}`}`);
+            }
+        } catch (err) {
+            console.error('PATCH /consumables failed:', err);
+            alert('Could not reach server.');
+        }
+    }
+
+    async function deleteConsumable(id) {
+        const cur = cachedConsumables.find(c => c.id === id);
+        if (!confirm(`Delete "${cur?.name}"? This cannot be undone.`)) return;
+        try {
+            const response = await fetch('/consumables/' + id, { method: 'DELETE' });
+            if (response.ok || response.status === 204) {
+                await loadConsumables();
+            } else {
+                const err = await response.json();
+                alert(`Delete failed: ${err.detail || `HTTP ${response.status}`}`);
+            }
+        } catch (err) {
+            console.error('DELETE /consumables failed:', err);
+            alert('Could not reach server.');
+        }
+    }
+
     // ---- CSV Exports ----
 
     function exportMembers() {
@@ -482,6 +804,22 @@
             r.equipmentName, r.reservationCount, r.totalHours.toFixed(1), r.topMember
         ]);
         downloadCsv('usage-summary', headers, rows);
+    }
+
+    function exportConsumables() {
+        if (!cachedConsumables || cachedConsumables.length === 0) {
+            alert('No consumables to export.');
+            return;
+        }
+        const headers = ['ID', 'Name', 'Category', 'Unit', 'On Hand', 'Threshold', 'Low Stock', 'Last Updated'];
+        const rows = cachedConsumables.map(c => [
+            `CN-${String(c.id).padStart(3, '0')}`,
+            c.name, c.category, c.unit,
+            c.quantity_on_hand, c.low_stock_threshold,
+            c.is_low_stock ? 'YES' : 'no',
+            c.last_updated
+        ]);
+        downloadCsv('consumables', headers, rows);
     }
 
     function downloadCsv(prefix, headers, rows) {
@@ -518,7 +856,7 @@
         div.textContent = str ?? "";
         return div.innerHTML;
     }
-</script>
+    </script>
 
 </body>
 </html>
