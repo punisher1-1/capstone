@@ -233,11 +233,16 @@ def delete_equipment(equipment_id: int, db: Session = Depends(get_db)):
 # =================================================================
 # Member CRUD
 # =================================================================
+# --- LIST: hide inactive members by default ----------------------------------
 @app.get("/members", response_model=list[MemberRead])
-def list_members(db: Session = Depends(get_db)):
-    return db.scalars(
-        select(models.Member).order_by(models.Member.last_name)
-    ).all()
+def list_members(
+    include_inactive: bool = False,
+    db: Session = Depends(get_db),
+):
+    stmt = select(models.Member).order_by(models.Member.id)
+    if not include_inactive:
+        stmt = stmt.where(models.Member.is_active == True)
+    return db.scalars(stmt).all()
 
 
 @app.get("/members/{member_id}", response_model=MemberRead)
@@ -268,6 +273,19 @@ def create_member(item: MemberCreate, db: Session = Depends(get_db)):
         )
     return member
 
+@app.post("/members/{member_id}/reactivate", response_model=MemberRead)
+def reactivate_member(member_id: int, db: Session = Depends(get_db)):
+    member = db.get(models.Member, member_id)
+    if member is None:
+        raise HTTPException(status_code=404,
+                            detail=f"Member {member_id} not found")
+    if member.is_active:
+        raise HTTPException(status_code=409,
+                            detail=f"Member {member_id} is already active")
+    member.is_active = True
+    db.commit()
+    db.refresh(member)
+    return member
 
 @app.put("/members/{member_id}", response_model=MemberRead)
 def update_member(member_id: int, item: MemberCreate,
@@ -293,13 +311,17 @@ def update_member(member_id: int, item: MemberCreate,
     return member
 
 
+# --- DELETE: soft delete instead of removing the row -------------------------
 @app.delete("/members/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_member(member_id: int, db: Session = Depends(get_db)):
     member = db.get(models.Member, member_id)
     if member is None:
         raise HTTPException(status_code=404,
                             detail=f"Member {member_id} not found")
-    db.delete(member)
+    if not member.is_active:
+        raise HTTPException(status_code=409,
+                            detail=f"Member {member_id} is already inactive")
+    member.is_active = False
     db.commit()
     return None
 

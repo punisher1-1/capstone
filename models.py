@@ -123,7 +123,7 @@ class CheckIn(Base):
         return (f"<CheckIn id={self.id} member={self.member_id} "
                 f"checked_out={self.check_out_time is not None}>")
 """
-Consumable ORM model — paste into models.py alongside Member, Equipment, etc.
+Consumable ORM model entered into models.py alongside Member, Equipment, etc.
 
 Why SQLAlchemy 2.0 mapped_column style:
   - Matches the existing models.py pattern.
