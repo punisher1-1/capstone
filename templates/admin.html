@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-
-    <!-- address bar title -->
+    <base href="/static/">  
     <title>MakerSpaceHub — Admin Dashboard</title>
 
     <link rel="stylesheet" href="css/stylesheet.css">
@@ -24,7 +23,7 @@
             <li><a href="equipment.html">Equipment</a></li>
             <li><a href="dashboard.html">My Dashboard</a></li>
             <li><a href="checkin.html">Staff Check-In</a></li>
-            <li><a href="admin.html" class="active">Admin</a></li>
+            <li><a href="/admin" class="active">Admin</a></li>
         </ul>
     </nav>
 
@@ -32,13 +31,12 @@
 
         <h1 class="page-title">Admin Dashboard</h1>
         <p class="page-subtitle">
-            System overview and management. Logged in as: <strong>Director Chen</strong> (Admin)
+            System overview and management. Logged in as:
+            <strong id="auth-user">…</strong>
+            &nbsp;|&nbsp;
+            <a href="#" onclick="logout(); return false;">Log out</a>
         </p>
-
-        <div class="alert alert-warning">
-            <strong>Prototype Note:</strong> Admin access is simulated. In the final system, this page requires admin-level authentication.
-        </div>
-
+        
         <!-- System Stats -->
         <div class="grid-3 section-gap">
             <div class="stat-box">
@@ -307,17 +305,46 @@
             <a href="equipment.html">Equipment</a> |
             <a href="dashboard.html">My Dashboard</a> |
             <a href="checkin.html">Staff Check-In</a> |
-            <a href="admin.html">Admin</a>
+            <a href="/admin">Admin</a>
         </p>
         <p style="margin-top: 6px;">MakerSpaceHub &mdash; IT299 Capstone Prototype &mdash; Purdue University Global</p>
     </footer>
 
     <script>
+        // ---- Auth boot ----
+// Defense in depth: /admin is server-gated, but this short-circuits any
+// stale page state if the cookie expired between page loads.
+async function checkAuthOrRedirect() {
+    try {
+        const res = await fetch('/me');
+        if (!res.ok) {
+            window.location.href = '/login';
+            return null;
+        }
+        const me = await res.json();
+        document.getElementById('auth-user').textContent = me.username;
+        return me;
+    } catch (err) {
+        window.location.href = '/login';
+        return null;
+    }
+}
+
+async function logout() {
+    try {
+        await fetch('/logout', { method: 'POST' });
+    } finally {
+        window.location.href = '/login';
+    }
+}
     let cachedMembers = [];
     let cachedUsage = [];
     let cachedConsumables = [];
 
-    document.addEventListener('DOMContentLoaded', loadDashboard);
+    document.addEventListener('DOMContentLoaded', async () => {
+    const me = await checkAuthOrRedirect();
+    if (me) loadDashboard();
+});
 
     async function loadDashboard() {
         try {

@@ -12,6 +12,7 @@ from typing import Literal, Optional
 from fastapi import FastAPI, Depends, Form, HTTPException, Query, status
 from decimal import Decimal 
 from fastapi.responses import HTMLResponse
+from fastapi import Response  
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
@@ -171,12 +172,86 @@ def login_page(request: Request):
 
 
 @app.post("/login")
-def login_submit(username: str = Form(...), password: str = Form(...)):
+def login_submit(
+    response: Response,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    """
+    Validate mock credentials and issue a session cookie.
+    The cookie is HttpOnly so JavaScript on the page cannot read it —
+    only the browser can send it back on subsequent requests.
+    """
     if username == MOCK_USERNAME and password == MOCK_PASSWORD:
-        return {"message": f"Welcome, {username}"}
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=SESSION_COOKIE_VALUE,
+            max_age=SESSION_MAX_AGE_SECONDS,
+            httponly=True,    # JS can't read it → CSRF mitigations don't double up
+            samesite="lax",   # cookie sent on top-level GETs, blocked on cross-site POSTs
+            secure=False,     # flip to True once the app is behind HTTPS
+        )
+        return {"message": f"Welcome, {username}", "redirect": "/admin"}
     raise HTTPException(status_code=401, detail="Invalid username or password")
 
+@app.post("/logout")
+def logout(response: Response):
+    """Clear the session cookie. JS frontend then redirects to /login."""
+    response.delete_cookie(key=SESSION_COOKIE_NAME)
+    return {"message": "Logged out", "redirect": "/login"}
 
+
+@app.get("/me")
+def whoami(request: Request):
+    """
+    Lightweight auth probe used by admin.html on page load.
+    Returns 401 (not 200 with a 'logged_out' flag) so the JS check is dead simple:
+    if /me 401s, redirect to /login.
+    """
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if token != SESSION_COOKIE_VALUE:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {"authenticated": True, "username": MOCK_USERNAME}
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page(request: Request):
+    """
+    Server-gated admin page. Replaces direct access to /static/admin.html.
+    Note: we don't use Depends(require_admin) here because that would return
+    JSON {"detail": "Not authenticated"} to a browser — we want a redirect
+    to /login instead. So we inline the check.
+    """
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if token != SESSION_COOKIE_VALUE:
+        return RedirectResponse(url="/login", status_code=303)
+    return templates.TemplateResponse(request, "admin.html")
+# =================================================================
+# Session cookie config (mock auth)
+# =================================================================
+# This is intentionally a fixed token, not a signed JWT. The capstone scope
+# is "demonstrate the auth wiring pattern"; graduating to a real per-user
+# token with bcrypt-hashed passwords against the member table is documented
+# as post-prototype work.
+SESSION_COOKIE_NAME = "msh_session"
+SESSION_COOKIE_VALUE = "admin-mock-session-v1"
+SESSION_MAX_AGE_SECONDS = 60 * 60 * 8  # 8 hours
+
+
+def require_admin(request: Request):
+    """
+    FastAPI dependency. Attach to any route that requires admin login:
+
+        @app.post("/equipment", dependencies=[Depends(require_admin)])
+
+    Reads the session cookie set by POST /login. Raises 401 if missing
+    or wrong. Returns a minimal user dict so handlers that want it can
+    accept `user: dict = Depends(require_admin)`.
+    """
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if token != SESSION_COOKIE_VALUE:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {"username": MOCK_USERNAME}
 # =================================================================
 # Equipment CRUD
 # =================================================================
@@ -195,7 +270,8 @@ def get_equipment(equipment_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/equipment", response_model=EquipmentRead,
-          status_code=status.HTTP_201_CREATED)
+          status_code=status.HTTP_201_CREATED,
+          dependencies=[Depends(require_admin)])
 def create_equipment(item: EquipmentCreate, db: Session = Depends(get_db)):
     eq = models.Equipment(**item.model_dump())
     db.add(eq)
@@ -204,7 +280,8 @@ def create_equipment(item: EquipmentCreate, db: Session = Depends(get_db)):
     return eq
 
 
-@app.put("/equipment/{equipment_id}", response_model=EquipmentRead)
+@app.put("/equipment/{equipment_id}", response_model=EquipmentRead,
+         dependencies=[Depends(require_admin)])
 def update_equipment(equipment_id: int, item: EquipmentCreate,
                      db: Session = Depends(get_db)):
     eq = db.get(models.Equipment, equipment_id)
@@ -219,7 +296,8 @@ def update_equipment(equipment_id: int, item: EquipmentCreate,
 
 
 @app.delete("/equipment/{equipment_id}",
-            status_code=status.HTTP_204_NO_CONTENT)
+            status_code=status.HTTP_204_NO_CONTENT,
+            dependencies=[Depends(require_admin)])
 def delete_equipment(equipment_id: int, db: Session = Depends(get_db)):
     eq = db.get(models.Equipment, equipment_id)
     if eq is None:
@@ -255,7 +333,8 @@ def get_member(member_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/members", response_model=MemberRead,
-          status_code=status.HTTP_201_CREATED)
+          status_code=status.HTTP_201_CREATED,
+          dependencies=[Depends(require_admin)])
 def create_member(item: MemberCreate, db: Session = Depends(get_db)):
     data = item.model_dump()
     if data["join_date"] is None:
@@ -273,7 +352,8 @@ def create_member(item: MemberCreate, db: Session = Depends(get_db)):
         )
     return member
 
-@app.post("/members/{member_id}/reactivate", response_model=MemberRead)
+@app.post("/members/{member_id}/reactivate", response_model=MemberRead,
+          dependencies=[Depends(require_admin)])
 def reactivate_member(member_id: int, db: Session = Depends(get_db)):
     member = db.get(models.Member, member_id)
     if member is None:
@@ -287,7 +367,8 @@ def reactivate_member(member_id: int, db: Session = Depends(get_db)):
     db.refresh(member)
     return member
 
-@app.put("/members/{member_id}", response_model=MemberRead)
+@app.put("/members/{member_id}", response_model=MemberRead,
+         dependencies=[Depends(require_admin)])
 def update_member(member_id: int, item: MemberCreate,
                   db: Session = Depends(get_db)):
     member = db.get(models.Member, member_id)
@@ -312,7 +393,9 @@ def update_member(member_id: int, item: MemberCreate,
 
 
 # --- DELETE: soft delete instead of removing the row -------------------------
-@app.delete("/members/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/members/{member_id}",
+            status_code=status.HTTP_204_NO_CONTENT,
+            dependencies=[Depends(require_admin)])
 def delete_member(member_id: int, db: Session = Depends(get_db)):
     member = db.get(models.Member, member_id)
     if member is None:
@@ -667,7 +750,8 @@ def get_consumable(consumable_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/consumables", response_model=ConsumableRead,
-          status_code=status.HTTP_201_CREATED)
+          status_code=status.HTTP_201_CREATED,
+          dependencies=[Depends(require_admin)])
 def create_consumable(item: ConsumableCreate, db: Session = Depends(get_db)):
     consumable = models.Consumable(**item.model_dump())
     db.add(consumable)
@@ -676,7 +760,8 @@ def create_consumable(item: ConsumableCreate, db: Session = Depends(get_db)):
     return consumable
 
 
-@app.patch("/consumables/{consumable_id}", response_model=ConsumableRead)
+@app.patch("/consumables/{consumable_id}", response_model=ConsumableRead,
+           dependencies=[Depends(require_admin)])
 def update_consumable(consumable_id: int, item: ConsumableUpdate,
                       db: Session = Depends(get_db)):
     """Partial update. Common use: PATCH with just quantity_on_hand to restock."""
@@ -700,7 +785,8 @@ def update_consumable(consumable_id: int, item: ConsumableUpdate,
 
 
 @app.delete("/consumables/{consumable_id}",
-            status_code=status.HTTP_204_NO_CONTENT)
+            status_code=status.HTTP_204_NO_CONTENT,
+            dependencies=[Depends(require_admin)])
 def delete_consumable(consumable_id: int, db: Session = Depends(get_db)):
     """Hard delete. Equipment uses soft-delete (status='retired'); consumables
     don't have a status field, so a hard delete is fine — empty items can

@@ -101,30 +101,31 @@
         const message = document.getElementById('message');
 
         form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            const formData = new FormData(form);
-
-            try {
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    message.className = 'message success';
-                    message.textContent = data.message;
-                } else {
-                    message.className = 'message error';
-                    message.textContent = data.detail || 'Login failed';
-                }
-            } catch (err) {
-                message.className = 'message error';
-                message.textContent = 'Network error: ' + err.message;
-            }
+    event.preventDefault();
+    const formData = new FormData(form);
+    try {
+        const response = await fetch('/login', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'   // ensure the Set-Cookie response is honored
         });
+        const data = await response.json();
+        if (response.ok) {
+            message.className = 'message success';
+            message.textContent = data.message + ' — redirecting…';
+            // Brief pause so the user sees the success state, then go to admin
+            setTimeout(() => {
+                window.location.href = data.redirect || '/admin';
+            }, 600);
+        } else {
+            message.className = 'message error';
+            message.textContent = data.detail || 'Login failed';
+        }
+    } catch (err) {
+        message.className = 'message error';
+        message.textContent = 'Network error: ' + err.message;
+    }
+});
     </script>
 </body>
 </html>
