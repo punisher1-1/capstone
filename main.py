@@ -197,7 +197,7 @@ def login_submit(
             samesite="lax",   # cookie sent on top-level GETs, blocked on cross-site POSTs
             secure=False,     # flip to True once the app is behind HTTPS
         )
-        return {"message": f"Welcome, {username}", "redirect": "/admin"}
+        return {"message": f"Welcome, {MOCK_USERNAME}", "redirect": "/admin"}
     raise HTTPException(status_code=401, detail="Invalid username or password")
 
 @app.post("/logout")
