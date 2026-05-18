@@ -182,7 +182,13 @@ def login_submit(
     The cookie is HttpOnly so JavaScript on the page cannot read it —
     only the browser can send it back on subsequent requests.
     """
-    if username == MOCK_USERNAME and password == MOCK_PASSWORD:
+
+        # Normalize the username (trim whitespace, fold case) so mobile
+# keyboards that auto-capitalize "admin" -> "Admin" don't break login.
+# The password is intentionally NOT normalized — passwords are
+# case-sensitive by design (lowercasing halves the keyspace).
+    normalized_username = username.strip().casefold()
+    if normalized_username == MOCK_USERNAME.casefold() and password == MOCK_PASSWORD:
         response.set_cookie(
             key=SESSION_COOKIE_NAME,
             value=SESSION_COOKIE_VALUE,
